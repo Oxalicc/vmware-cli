@@ -37,7 +37,7 @@
 客户机操作（文件、目录、程序和进程操作都需要 `-gu`/`-gp`）：
 - `copyFileFromHostToGuest <vmx> <host路径> <guest路径>`、`copyFileFromGuestToHost <vmx> <guest路径> <host路径>`
 - `fileExistsInGuest`、`directoryExistsInGuest`、`listDirectoryInGuest`、`createDirectoryInGuest`
-- `deleteFileInGuest`、`deleteDirectoryInGuest`、`renameFileInGuest`、`createTempfileInGuest`、`listProcessesInGuest`、`killProcessInGuest`
+- `deleteFileInGuest`、`deleteDirectoryInGuest`、`renameFileInGuest`、`createTempfileInGuest`
 - `runProgramInGuest <vmx> [-noWait] [-activeWindow] [-interactive] <program路径> [args...]`
 - `runScriptInGuest <vmx> [-noWait] [-activeWindow] [-interactive] <解释器路径> <脚本文本>`
 - `killProcessInGuest <vmx> <pid>`
