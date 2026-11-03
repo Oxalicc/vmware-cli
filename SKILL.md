@@ -57,18 +57,28 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <skill目录>/scripts/probe-
 
 ## 安全凭据流程
 
-- 不得在对话中索取、接收或复述真实用户名、密码、令牌或私钥；不得写入回复、日志、脚本或持久化文件。
-- 不得在 Agent 工具会话中执行可能显示 `Guest user:`、`Guest password:` 等提示的命令，也不得无凭据试探客户机登录。
-- 不得用 Base64、变量拼接或 `sudo -S` 传递密码；`VM_PASS_B64` 不是加密，仍可能暴露在参数或日志中。
-- 需要认证时，先说明目的和确切命令，再把 `scripts/run-guest-local.zsh` 交给用户在本机终端执行。该启动器在非交互终端拒绝执行，不读取密码变量，并禁止 `-gu`、`-gp`、`-vp` 参数。Agent 不得代跑。
-- 用户只需回复命令是否成功及可公开的错误文本；除非后续确有必要，不索取用户名，绝不索取密码。
+- 不得在对话中索取、接收或复述真实密码、令牌、私钥内容或私钥口令；不得把它们写入回复、日志、脚本或持久化文件。用户名、主机地址、Host 别名和密钥路径属于非敏感连接配置，可以保存和复用。
+- 不得在 Agent 工具会话中执行可能显示 `Guest user:`、`Guest password:` 等提示的命令，也不得无凭据试探客户机登录。不得用 Base64、变量拼接或 `sudo -S` 传递密码。
+- **macOS 一次设置**：把 `scripts/setup-ssh-macos.zsh` 交给用户在本机终端运行。脚本复用或创建专用密钥、执行一次 `ssh-copy-id`、用 `ssh-add --apple-use-keychain` 保存私钥口令，并生成 `~/.ssh/vmware-cli/<别名>.conf`。Agent 不代跑初始授权。
+- **不要重复解锁**：不要为单次任务创建专用 `SSH_AUTH_SOCK`，不要让用户先解锁默认 agent、又解锁另一个 agent。macOS 使用钥匙串和持久 SSH 配置；其他平台使用用户已有的持久 ssh-agent 或等价系统凭据设施。
+- **授权后接手**：先用同一配置从 Agent 环境验证非交互连接。成功后，后续只读命令默认由 Agent 执行；修改类命令展示范围并经确认后，也由 Agent 执行，不得再次委托给用户。
+- Agent 不得读取、复制、上传或输出私钥内容。使用配置中的 `IdentitiesOnly=yes` 和 `BatchMode=yes`，禁止密码提示。
+- 只有尚未建立免密 SSH、系统钥匙串/agent 不可用、需要交互式 sudo 密码，或用户明确要求手动操作时，才交给用户本机执行，并说明具体原因。不要自制“加密密码文件”代替系统钥匙串。
+
+macOS 初始设置（用户本机终端执行一次）：
 
 ```zsh
-zsh <skill目录>/scripts/run-guest-local.zsh \
-  "/path/to/vm.vmx" runProgramInGuest /bin/true
+zsh <skill目录>/scripts/setup-ssh-macos.zsh <guest-user>@<guest-ip> <别名>
 ```
 
-SSH 密钥引导、用户名确认和完整反例见 `references/guest-credentials.md`；优先使用 `ssh-copy-id`，不要把密码通过 `vmrun` 传给 sudo。
+授权后由 Agent 执行：
+
+```bash
+ssh -F "$HOME/.ssh/vmware-cli/<别名>.conf" -o BatchMode=yes <别名> \
+  'df -h /; du -sh /var/cache/apt "$HOME/.cache" 2>/dev/null'
+```
+
+完整流程、钥匙串边界、sudo 边界和反例见 `references/guest-credentials.md`。
 
 ## 典型流程示例
 
@@ -92,7 +102,7 @@ VMRUN="/c/Program Files/VMware/VMware Workstation/vmrun.exe"
 "$VMRUN" -T ws start "C:/Users/me/Documents/Virtual Machines/lab-clone/lab-clone.vmx" gui
 ```
 
-客户机操作先由 Agent 检查 Tools；后续需要认证的命令必须按“安全凭据流程”交给用户在本机终端执行：
+客户机操作先由 Agent 检查 Tools；初始认证按“安全凭据流程”处理，免密 SSH 建立后由 Agent 接手后续命令：
 
 ```bash
 "$VMRUN" -T ws checkToolsState "D:/vm/x.vmx"
@@ -111,6 +121,7 @@ ssh root@esxi01 "esxcli vm process kill --type=hard --world-id=<wid>"
 - `scripts/probe-vmware.sh` — macOS/Linux 环境探测与本地虚拟机清单，`--list-all` 显示全部
 - `scripts/probe-vmware.ps1` — Windows 环境探测与本地虚拟机清单，`-ListAll` 显示全部
 - `scripts/run-guest-local.zsh` — 仅供用户本机终端运行的安全 guest 命令启动器
+- `scripts/setup-ssh-macos.zsh` — macOS 一次性 SSH 密钥、钥匙串与持久配置设置，仅供用户本机终端运行
 - `references/workstation.md` — Workstation/Fusion 全命令速查
 - `references/guest-credentials.md` — 客户机认证、SSH 引导与完整反例
 - `references/esxi.md` — ESXi 主机命令速查

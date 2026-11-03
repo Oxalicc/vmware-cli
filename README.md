@@ -39,6 +39,8 @@ references/esxi.md          vim-cmd 虚拟机与快照、esxcli 进程/网络/�
 references/powercli.md      连接、生命周期、快照克隆、Invoke-VMScript
 scripts/probe-vmware.sh     macOS/Linux 环境探测脚本
 scripts/probe-vmware.ps1    Windows 环境探测脚本
+scripts/run-guest-local.zsh 用户本机终端的 vmrun 安全凭据启动器
+scripts/setup-ssh-macos.zsh macOS 一次性 SSH 密钥、钥匙串与持久配置设置
 ```
 
 ## 注意

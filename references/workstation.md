@@ -18,7 +18,7 @@
 - `-vp <password>` — 加密虚拟机的解密密码
 - `-gu <user>` / `-gp <password>` — 客户机凭据（guest 文件、程序和进程操作需要，且客户机已装 VMware Tools）
 
-**安全要求**：Agent 不得在对话中索取真实凭据，不得在工具会话中触发 `Guest user:` / `Guest password:` 提示，也不得把真实密码放入 `-gp` / `-vp` 命令。禁止用 Base64 或 `sudo -S` 间接传密码。需要认证时，按 `SKILL.md` 的“安全凭据流程”把 `scripts/run-guest-local.zsh` 交给用户在本机终端执行。
+**安全要求**：Agent 不得在对话中索取真实密码或私钥口令，不得在工具会话中触发 `Guest user:` / `Guest password:` 提示，也不得把真实密码放入 `-gp` / `-vp` 命令。禁止用 Base64 或 `sudo -S` 间接传密码。初始 vmrun 认证按 `SKILL.md` 交给用户本机执行；macOS 优先用 `scripts/setup-ssh-macos.zsh` 完成一次密钥与钥匙串设置，不要创建任务专用 `SSH_AUTH_SOCK` 或重复 `ssh-add`。免密 SSH 建立后，后续只读命令默认由 Agent 接手，修改类命令经确认后由 Agent 执行，不得重复委托用户。
 
 电源命令：`start <vmx> [gui|nogui]`、`stop <vmx> [hard|soft]`、`reset <vmx> [hard|soft]`、
 `suspend <vmx> [hard|soft]`、`pause <vmx>`、`unpause <vmx>`
@@ -37,7 +37,7 @@
 客户机操作（文件、目录、程序和进程操作都需要 `-gu`/`-gp`）：
 - `copyFileFromHostToGuest <vmx> <host路径> <guest路径>`、`copyFileFromGuestToHost <vmx> <guest路径> <host路径>`
 - `fileExistsInGuest`、`directoryExistsInGuest`、`listDirectoryInGuest`、`createDirectoryInGuest`
-- `deleteFileInGuest`、`deleteDirectoryInGuest`、`renameFileInGuest`、`createTempfileInGuest`
+- `deleteFileInGuest`、`deleteDirectoryInGuest`、`renameFileInGuest`、`createTempfileInGuest`、`listProcessesInGuest`、`killProcessInGuest`
 - `runProgramInGuest <vmx> [-noWait] [-activeWindow] [-interactive] <program路径> [args...]`
 - `runScriptInGuest <vmx> [-noWait] [-activeWindow] [-interactive] <解释器路径> <脚本文本>`
 - `killProcessInGuest <vmx> <pid>`
@@ -88,7 +88,7 @@
 - `-k` 收缩（需客户机先做 shrink prepare `-p`）
 - `-d` 碎片整理
 - `-r <源> -t <类型>` 转换格式
-- `-n <源> <目标>` 重命名/克隆磁盘文件
+- `-n <源> -t <类型>` 重命名/克隆磁盘文件
 - `-R` 一致性检查修复、`-F` 修复磁盘链
 
 要求：磁盘未被虚拟机占用（关机状态）；只有本地磁盘支持创建/扩容/收缩。操作前确认并建议备份。
