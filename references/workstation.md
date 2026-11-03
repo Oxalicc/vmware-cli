@@ -18,6 +18,8 @@
 - `-vp <password>` — 加密虚拟机的解密密码
 - `-gu <user>` / `-gp <password>` — 客户机凭据（guest 文件、程序和进程操作需要，且客户机已装 VMware Tools）
 
+**安全要求**：Agent 不得在对话中索取真实凭据，不得在工具会话中触发 `Guest user:` / `Guest password:` 提示，也不得把真实密码放入 `-gp` / `-vp` 命令。禁止用 Base64 或 `sudo -S` 间接传密码。需要认证时，按 `SKILL.md` 的“安全凭据流程”把 `scripts/run-guest-local.zsh` 交给用户在本机终端执行。
+
 电源命令：`start <vmx> [gui|nogui]`、`stop <vmx> [hard|soft]`、`reset <vmx> [hard|soft]`、
 `suspend <vmx> [hard|soft]`、`pause <vmx>`、`unpause <vmx>`
 

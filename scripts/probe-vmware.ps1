@@ -1,4 +1,4 @@
-param([switch]$ListAll)
+﻿param([switch]$ListAll)
 
 $ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8

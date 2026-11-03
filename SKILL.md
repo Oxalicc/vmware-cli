@@ -48,12 +48,27 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <skill目录>/scripts/probe-
 
 1. **定位 .vmx**：Workstation/Fusion 工具以 `.vmx` 全路径为标识。用 `vmrun list` 或探测脚本获取；`vmrun list` 只显示运行中的虚拟机，不等同于完整清单。
 2. **先探测再动手**：确认主机类型、工具路径、目标 `.vmx` 和当前状态。版本参数可能不同，以本机 `vmrun`、`vmcli ... --help` 输出为准。
-3. **客户机操作前置条件**：guest 命令要求客户机已开机、VMware Tools 正常，并提供 `-gu`/`-gp`（vmcli 用对应选项）凭据；先运行 `checkToolsState`。不要把真实密码写入回复、日志或持久化文件。
+3. **客户机操作前置条件**：guest 命令要求客户机已开机、VMware Tools 正常；先运行 `checkToolsState`。认证必须遵循下方“安全凭据流程”。
 4. **只读操作可直接执行**：`list`、`listSnapshots`、`checkToolsState`、`getGuestIPAddress` 和配置查询等不修改状态。
 5. **破坏性操作必须确认**：硬关机/重置、删除虚拟机或快照、恢复快照、删除/覆盖文件、修改硬件/网络/磁盘前，展示确切命令并等待用户明确确认；建议先创建快照。不要自动用 `hard` 替代失败的 `soft`。
 6. **软硬两种方式**：电源操作优先 `soft`；只有用户确认后才使用 `hard`。
-7. **加密虚拟机**：vmrun 需要 `-vp <密码>`；凭据仅作为当次命令参数使用，不回显。
+7. **加密虚拟机**：需要 `-vp` 时同样使用安全凭据流程，不得在 Agent 工具命令中填入真实密码。
 8. **输出量控制**：`vim-cmd vmsvc/getallvms`、`esxcli ... list` 在大型环境输出很长，先过滤或限定数量。
+
+## 安全凭据流程
+
+- 不得在对话中索取、接收或复述真实用户名、密码、令牌或私钥；不得写入回复、日志、脚本或持久化文件。
+- 不得在 Agent 工具会话中执行可能显示 `Guest user:`、`Guest password:` 等提示的命令，也不得无凭据试探客户机登录。
+- 不得用 Base64、变量拼接或 `sudo -S` 传递密码；`VM_PASS_B64` 不是加密，仍可能暴露在参数或日志中。
+- 需要认证时，先说明目的和确切命令，再把 `scripts/run-guest-local.zsh` 交给用户在本机终端执行。该启动器在非交互终端拒绝执行，不读取密码变量，并禁止 `-gu`、`-gp`、`-vp` 参数。Agent 不得代跑。
+- 用户只需回复命令是否成功及可公开的错误文本；除非后续确有必要，不索取用户名，绝不索取密码。
+
+```zsh
+zsh <skill目录>/scripts/run-guest-local.zsh \
+  "/path/to/vm.vmx" runProgramInGuest /bin/true
+```
+
+SSH 密钥引导、用户名确认和完整反例见 `references/guest-credentials.md`；优先使用 `ssh-copy-id`，不要把密码通过 `vmrun` 传给 sudo。
 
 ## 典型流程示例
 
@@ -77,12 +92,10 @@ VMRUN="/c/Program Files/VMware/VMware Workstation/vmrun.exe"
 "$VMRUN" -T ws start "C:/Users/me/Documents/Virtual Machines/lab-clone/lab-clone.vmx" gui
 ```
 
-在客户机内执行命令并取回结果（先检查 Tools；示例密码不是真实凭据）：
+客户机操作先由 Agent 检查 Tools；后续需要认证的命令必须按“安全凭据流程”交给用户在本机终端执行：
 
 ```bash
 "$VMRUN" -T ws checkToolsState "D:/vm/x.vmx"
-"$VMRUN" -T ws -gu user -gp 'pass' runProgramInGuest "D:/vm/x.vmx" /bin/sh -c "uname -a > /tmp/out.txt"
-"$VMRUN" -T ws -gu user -gp 'pass' copyFileFromGuestToHost "D:/vm/x.vmx" /tmp/out.txt ./out.txt
 ```
 
 ESXi 上找到并强制关掉一台卡死的虚拟机（`kill` 前必须获得明确确认）：
@@ -97,6 +110,8 @@ ssh root@esxi01 "esxcli vm process kill --type=hard --world-id=<wid>"
 
 - `scripts/probe-vmware.sh` — macOS/Linux 环境探测与本地虚拟机清单，`--list-all` 显示全部
 - `scripts/probe-vmware.ps1` — Windows 环境探测与本地虚拟机清单，`-ListAll` 显示全部
+- `scripts/run-guest-local.zsh` — 仅供用户本机终端运行的安全 guest 命令启动器
 - `references/workstation.md` — Workstation/Fusion 全命令速查
+- `references/guest-credentials.md` — 客户机认证、SSH 引导与完整反例
 - `references/esxi.md` — ESXi 主机命令速查
 - `references/powercli.md` — PowerCLI 速查
