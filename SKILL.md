@@ -62,6 +62,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <skill目录>/scripts/probe-
 - **macOS 一次设置**：把 `scripts/setup-ssh-macos.zsh` 交给用户在本机终端运行。脚本复用或创建专用密钥、执行一次 `ssh-copy-id`、用 `ssh-add --apple-use-keychain` 保存私钥口令，并生成 `~/.ssh/vmware-cli/<别名>.conf`。Agent 不代跑初始授权。
 - **不要重复解锁**：不要为单次任务创建专用 `SSH_AUTH_SOCK`，不要让用户先解锁默认 agent、又解锁另一个 agent。macOS 使用钥匙串和持久 SSH 配置；其他平台使用用户已有的持久 ssh-agent 或等价系统凭据设施。
 - **授权后接手**：先用同一配置从 Agent 环境验证非交互连接。成功后，后续只读命令默认由 Agent 执行；修改类命令展示范围并经确认后，也由 Agent 执行，不得再次委托给用户。
+- **固定主机名优先、IP 兜底**：客户机运行 `avahi-daemon` 且 `<主机名>.local` 已实测可用时，将 `HostName` 设为该 mDNS 名称；不可用或连接失败时，回退到 `getGuestIPAddress` 获取的当前 IP。两种方式都复用原别名、密钥和钥匙串，无需重新授权。
 - Agent 不得读取、复制、上传或输出私钥内容。使用配置中的 `IdentitiesOnly=yes` 和 `BatchMode=yes`，禁止密码提示。
 - 只有尚未建立免密 SSH、系统钥匙串/agent 不可用、需要交互式 sudo 密码，或用户明确要求手动操作时，才交给用户本机执行，并说明具体原因。不要自制“加密密码文件”代替系统钥匙串。
 

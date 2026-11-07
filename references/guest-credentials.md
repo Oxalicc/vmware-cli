@@ -46,6 +46,33 @@ ssh -F "$HOME/.ssh/vmware-cli/<别名>.conf" -o BatchMode=yes <别名> \
 4. 清理、安装、写文件、改权限或启动服务等修改类命令，先展示确切范围并取得确认，然后同样由 Agent 执行。
 5. 需要 sudo 时先尝试用户已授权的 `sudo -n <确切命令>`；不得用 `sudo -S`。如果 sudo 仍需交互密码，才把该条 sudo 命令交给用户本机执行，并明确说明原因。
 
+## 使用 mDNS 固定主机名
+
+如果 Ubuntu 正在运行 `avahi-daemon`，且 Mac 已实测能解析并连接 `<主机名>.local`，优先使用固定 mDNS 名称而不是动态 IP：
+
+```bash
+ssh -i "$HOME/.ssh/id_ed25519_vmware_cli" \
+  -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=5 \
+  <guest-user>@<guest-hostname>.local true
+```
+
+验证成功后，只需把现有 `~/.ssh/vmware-cli/<别名>.conf` 中的 `HostName` 改为 `<guest-hostname>.local`，保留别名、用户名、密钥和钥匙串配置：
+
+```bash
+ssh -F "$HOME/.ssh/vmware-cli/<别名>.conf" -o BatchMode=yes <别名>
+```
+
+这样 DHCP 分配的新 IP 不影响 SSH 目标，主机名对应的已知主机记录也可继续复用；主机密钥本身发生变化时仍必须核实，不能绕过检查。不要因 IP 变化重新运行 `ssh-copy-id`。
+
+**mDNS 不是必需条件，也不是唯一入口。** 如果未安装或未运行 `avahi-daemon`、`.local` 无法解析，或组播被网络/VPN/防火墙阻断：
+
+1. 用 `vmrun -T fusion getGuestIPAddress "<vmx路径>"` 获取当前 IP，再验证 SSH。
+2. IP 可用时，把同一配置的 `HostName` 暂时设为该 IP；别名、密钥、钥匙串和 `ssh-copy-id` 授权全部保持不变。
+3. 以后 `.local` 恢复可用时可以再切回固定主机名。不要自动安装或启动 Avahi；如需安装，先说明修改范围并获得确认。
+4. 只有 `.local` 和当前 IP 都无法连接时，才继续检查 VM/Tools、SSH 服务和网络，不直接重启或切换 NAT。
+
+如需直接使用 `ssh <别名>`，先检查别名是否冲突，并在用户确认后向 `~/.ssh/config` 添加一行 `Include ~/.ssh/vmware-cli/*.conf`；不要覆盖现有配置。
+
 ## 禁止重复解锁与环境分裂
 
 - 不要为单次任务创建新的 `SSH_AUTH_SOCK`，不要把 Agent 私有 socket 交给用户再次 `ssh-add`。这会造成“默认 agent 已解锁、Agent 仍无法认证”的反复操作。
